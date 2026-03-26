@@ -67,9 +67,7 @@ class EIAClient:
             )
 
         url = self._build_url(None)
-        params = {
-            "api_key": self.api_key,
-        }
+        params = {"api_key": self.api_key}
 
         logger.info("Requesting dataset metadata")
         return self._request_with_retry(url=url, params=params, retries=1)
@@ -78,8 +76,6 @@ class EIAClient:
         self,
         length: int = 5,
         offset: int = 0,
-        sort_column: str = "period",
-        sort_direction: str = "desc",
     ) -> dict:
         if not self.api_key:
             raise EIAInvalidAPIKeyError(
@@ -92,8 +88,10 @@ class EIAClient:
             ("api_key", self.api_key),
             ("offset", str(offset)),
             ("length", str(length)),
-            ("sort[0][column]", sort_column),
-            ("sort[0][direction]", sort_direction),
+            ("sort[0][column]", "period"),
+            ("sort[0][direction]", "desc"),
+            ("sort[1][column]", "facility"),
+            ("sort[1][direction]", "asc"),
         ]
 
         for column in self.data_columns:
@@ -138,12 +136,8 @@ class EIAClient:
 
             offset += page_size
 
-            if len(all_rows) >= total:
-                logger.info("Fetched all available rows according to API total.")
-                break
-
-            if len(page_data) < page_size:
-                logger.info("Last page detected because returned rows < page size.")
+            if total and offset >= total:
+                logger.info("Reached API total using offset pagination.")
                 break
 
         return all_rows
