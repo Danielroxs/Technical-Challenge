@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Data
+data/parquet/*.parquet
+data/tmp/*
+
+# OS / Editor
+.DS_Store
+.vscode/
