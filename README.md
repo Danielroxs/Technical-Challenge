@@ -46,78 +46,59 @@ arkham-nuclear-outages/
 └── README.md
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-### 1. Clone the repository
+1. **Clone the repository & set up environment**
 
 ```bash
 git clone <your-repo-url>
 cd arkham-nuclear-outages
+cp .env.example .env
+# Edit .env and set your EIA_API_KEY
 ```
 
-### 2. Configure Environment Variables
+2. **Start the backend** (in a new terminal)
 
-Copy the template file to create your local environment configuration:
+From the `backend/` directory:
 
 ```bash
-cp .env.example .env
-```
-
-Open the `.env` file in the project root and replace `your_api_key_here` with your actual **EIA API Key**.
-
-### 3. Setup Backend
-
-```powershell
-# Activate the virtual environment (Windows PowerShell only)
+cd backend
 .\.venv\Scripts\Activate.ps1
-# Install all backend dependencies
 pip install -r requirements.txt
-# Start the FastAPI server (must be running for the frontend to work)
 uvicorn app.main:app --reload
+# API: http://127.0.0.1:8000
 ```
 
-The API will be available at: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+3. **Start the frontend** (in a new terminal)
 
-### 4. Setup Frontend
-
-Open a new terminal:
+From the `frontend/` directory:
 
 ```bash
 cd frontend
 npm install
 npm run dev
+# Dashboard: http://localhost:5173
 ```
 
-The dashboard will be available at: [http://localhost:5173](http://localhost:5173)
-
-### 6. Data Source Logic
-
-The API is designed for high performance by separating storage from ingestion:
-
-```text
-/data    -> Serves records from local modeled Parquet files.
-/refresh -> Rebuilds Parquet files by fetching fresh data from EIA API.
-```
-
-This ensures that data queries are always fast, regardless of the external API's response time.
+4. **⚡️ First-Time Data Bootstrap**
+   On a fresh clone, the `data/parquet` directory is empty. Trigger the first refresh to auto-provision the local database and directory structure:
+   - **Option A (Recommended):** Open the dashboard and click "Refresh data".
+   - **Option B (CLI):** Run `python -m scripts.refresh_nuclear_outages` from the `backend/` folder.
+   - **Option C (API):** Send a `POST` to `http://127.0.0.1:8000/refresh` (curl/Postman/FastAPI docs UI).
+     **Note:** The first refresh may take 3-4 minutes to complete as it downloads and processes all historical data.
+     After this, the dashboard will display outage data.
 
 ---
 
-## Data Model & Schema
+## 📊 Data Model & Schema
 
-The model uses a simple relational structure with 3 tables to ensure traceability and efficient querying.
+The model uses a relational structure for traceability and performance:
 
-### Relationships:
+- **plants**: Dimension table (`plant_id`, `plant_name`).
+- **outages**: Fact table (`outage_id`, `capacity_mw`, `outage_mw`, `percent_outage`, `period`, etc.).
+- **refresh_runs**: Audit table to track API ingestion runs.
 
-## Data Model & Schema
-
-The model uses a simple relational structure with 3 tables to ensure traceability and efficient querying.
-
-- **plants**: Dimension table containing `plant_id` (PK) and `plant_name`.
-- **outages**: Fact table containing daily records (`outage_id`, `capacity_mw`, `outage_mw`, `percent_outage`, `period`, etc.).
-- **refresh_runs**: Audit table to track every API ingestion (status, records_fetched, timestamps).
-
-### Relationships:
+Relationships:
 
 - `plants.plant_id` → `outages.plant_id` (1:N)
 - `refresh_runs.run_id` → `outages.run_id` (1:N)
