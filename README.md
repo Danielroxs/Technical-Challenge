@@ -67,9 +67,12 @@ Open the `.env` file in the project root and replace `your_api_key_here` with yo
 
 ### 3. Setup Backend
 
-```bash
-cd backend
+```powershell
+# Activate the virtual environment (Windows PowerShell only)
+.\.venv\Scripts\Activate.ps1
+# Install all backend dependencies
 pip install -r requirements.txt
+# Start the FastAPI server (must be running for the frontend to work)
 uvicorn app.main:app --reload
 ```
 
@@ -230,7 +233,19 @@ In a production environment or for a larger-scale project, I would consider inte
 
 ---
 
-## Assumptions & Limitations
+### Note about EIA API totals
+
+During testing, the EIA API `response.total` value did not always match the number of rows actually returned through pagination for this dataset. This was manually verified against the API dashboard and by checking the last available pages.
+
+Because of that, `response.total` is treated as a diagnostic field only. Pagination completion is determined by the actual API response pages, stopping when no more rows are returned or when the returned page size is smaller than the requested page size.
+
+---
+
+## Bonus: Incremental Extraction & Deduplication
+
+- **Incremental Extraction:** The connector script now supports incremental data extraction. It queries the latest stored outage period in the local Parquet files and only fetches new or updated records from the EIA API.
+- **Lookback Window:** To safely capture late-arriving or recently changed records, a 7-day lookback window is applied. This ensures that any corrections or updates from the source are not missed.
+- **Deterministic Deduplication:** When merging incremental results, the process uses the `outage_id` as a deterministic unique key. This guarantees that only the latest version of each outage record is kept in the local Parquet files, preventing duplicates and ensuring data consistency.
 
 - **Data Refresh:** The `/refresh` action is synchronous; for very large datasets, a background task (Celery/RQ) would be preferred.
 - **Storage:** Parquet was chosen for its efficiency in analytical queries compared to CSV/JSON.
@@ -238,7 +253,30 @@ In a production environment or for a larger-scale project, I would consider inte
 
 ---
 
-## Environment Variables
+## Testing
+
+This project includes a focused test suite covering the most critical backend logic:
+
+- **Incremental refresh date calculation:** Ensures the connector correctly computes the incremental extraction window using the latest outage period minus the lookback days.
+- **Deterministic deduplication:** Verifies that merging outages keeps only the latest record per `outage_id` (by `ingested_at`), preventing duplicates in Parquet files.
+- **End-to-end API integration:** Uses temporary Parquet files and the real `/data` endpoint to validate filtering, pagination, and the full API → service → repository flow.
+
+### How to run the tests
+
+From the `backend/` directory, with your virtual environment activated:
+
+```bash
+python -m pytest -q
+```
+
+To run a specific test file:
+
+```bash
+python -m pytest tests/test_refresh_service.py -q
+python -m pytest tests/test_api_data.py -q
+```
+
+---
 
 Required:
 

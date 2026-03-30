@@ -88,6 +88,8 @@ class EIAClient:
         self,
         length: int = 5,
         offset: int = 0,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> dict:
         if not self.api_key:
             raise EIAInvalidAPIKeyError(
@@ -102,41 +104,64 @@ class EIAClient:
             ("api_key", self.api_key),
             ("offset", str(offset)),
             ("length", str(length)),
-            ("sort[0][column]", "period"),
-            ("sort[0][direction]", "desc"),
-            ("sort[1][column]", "facility"),
-            ("sort[1][direction]", "asc"),
         ]
+
+        if start_date:
+            params.append(("start", start_date))
+
+        if end_date:
+            params.append(("end", end_date))
+
+        params.extend(
+            [
+                ("sort[0][column]", "period"),
+                ("sort[0][direction]", "desc"),
+                ("sort[1][column]", "facility"),
+                ("sort[1][direction]", "asc"),
+            ]
+        )
 
         # Request only the columns needed by the ingestion pipeline.
         for column in self.data_columns:
             params.append(("data[]", column))
 
         logger.info(
-            "Requesting EIA data page | offset=%s length=%s data_columns=%s",
+            "Requesting EIA data page | offset=%s length=%s start_date=%s end_date=%s data_columns=%s",
             offset,
             length,
+            start_date,
+            end_date,
             self.data_columns,
         )
 
         return self._request_with_retry(url=url, params=params, retries=1)
 
     # Read the full dataset by iterating through all available pages.
-    def get_all_data(self, page_size: int | None = None) -> list[dict]:
+    def get_all_data(
+        self,
+        page_size: int | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict]:
         page_size = page_size or settings.DEFAULT_PAGE_SIZE
         offset = 0
         all_rows = []
         total = None
 
         while True:
-            response = self.get_data_page(length=page_size, offset=offset)
+            response = self.get_data_page(
+                length=page_size,
+                offset=offset,
+                start_date=start_date,
+                end_date=end_date,
+            )
             response_block = response.get("response", {})
             page_data = response_block.get("data", [])
 
             # Capture the reported total once to know when pagination is complete.
             if total is None:
                 total = int(response_block.get("total", 0))
-                logger.info("API total rows available: %s", total)
+                logger.info("API total rows available for current query: %s", total)
 
             if not page_data:
                 logger.info("No more rows returned by API. Stopping pagination.")
