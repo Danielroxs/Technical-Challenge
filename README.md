@@ -48,13 +48,24 @@ arkham-nuclear-outages/
 
 ## 🚀 Quick Start
 
-1. **Clone the repository & set up environment**
+### 1. Clone the repository & set up environment
 
 ```bash
-git clone <your-repo-url>
-cd arkham-nuclear-outages
-cp .env.example .env
+# Clone the repository
+git clone https://github.com/Danielroxs/Technical-Challenge.git
+cd Technical-Challenge
+
+# Setup environment variables
+Copy-Item .env.example .env
 # Edit .env and set your EIA_API_KEY
+
+# Create virtual environment
+python -m venv .env
+
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+
+
 ```
 
 Required:
