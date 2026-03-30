@@ -65,7 +65,6 @@ python -m venv .env
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
 
-
 ```
 
 Required:
@@ -114,13 +113,14 @@ npm run dev
 # Dashboard: http://localhost:5173
 ```
 
-4. **⚡️ First-Time Data Bootstrap**
+4. **⚡️ Initialize local database (First-time only)**
+
    On a fresh clone, the `data/parquet` directory is empty. Trigger the first refresh to auto-provision the local database and directory structure:
-   - **Option A (Recommended):** Open the dashboard and click "Refresh data".
+   - **Option A (Recommended):** Open the dashboard and click **"Refresh data"**.
    - **Option B (CLI):** Run `python -m scripts.refresh_nuclear_outages` from the `backend/` folder.
    - **Option C (API):** Send a `POST` to `http://127.0.0.1:8000/refresh` (curl/Postman/FastAPI docs UI).
-     **Note:** The first refresh may take 3-4 minutes to complete as it downloads and processes all historical data.
-     After this, the dashboard will display outage data.
+
+   **Note:** The first refresh may take 3-4 minutes to complete as it downloads and processes all historical data. After this, the dashboard will display outage data.
 
 ---
 
