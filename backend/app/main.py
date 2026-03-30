@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 
+# Main FastAPI application for serving outage data and refresh actions
 app = FastAPI(title="Arkham Nuclear Outages API")
 
+# Allow the local React frontend to call the API during development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -18,4 +20,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register API routes such as /data and /refresh
 app.include_router(router)

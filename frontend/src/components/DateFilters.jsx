@@ -12,6 +12,7 @@ export default function DateFilters({
         <input
           type="date"
           value={startDate}
+          // Prevent selecting a start date after the current end date or after today
           max={endDate || maxDate}
           onChange={(event) => onStartDateChange(event.target.value)}
         />
@@ -22,6 +23,7 @@ export default function DateFilters({
         <input
           type="date"
           value={endDate}
+          // Keep the end date within a valid range: not before startDate and not after today
           min={startDate || undefined}
           max={maxDate}
           onChange={(event) => onEndDateChange(event.target.value)}

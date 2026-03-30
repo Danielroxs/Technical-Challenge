@@ -5,6 +5,7 @@ export default function PaginationControls({
   onNext,
 }) {
   return (
+    // Simple client-side pagination controls driven by backend pagination metadata
     <div style={{ marginTop: "16px", textAlign: "center" }}>
       <button onClick={onPrevious} disabled={currentPage === 1}>
         Previous

@@ -1,5 +1,6 @@
 export default function SearchForm({ value, onChange, onSubmit }) {
   return (
+    // Controlled form used to apply plant name filtering from the parent component
     <form className="search-form" onSubmit={onSubmit}>
       <input
         type="text"

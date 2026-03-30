@@ -7,6 +7,7 @@ from app.repositories.parquet_repository import ParquetRepository
 
 
 def test_get_data_returns_filtered_sorted_results_from_parquet(tmp_path, monkeypatch):
+    # Minimal reference data used to simulate the modeled Parquet layer
     plants_df = pd.DataFrame(
         [
             {"plant_id": "1729", "plant_name": "Fermi"},
@@ -59,9 +60,11 @@ def test_get_data_returns_filtered_sorted_results_from_parquet(tmp_path, monkeyp
         ]
     )
 
+    # Write test Parquet files so the API reads from isolated local data
     plants_df.to_parquet(tmp_path / "plants.parquet", index=False)
     outages_df.to_parquet(tmp_path / "outages.parquet", index=False)
 
+    # Replace the default repository with a temporary one for this test
     test_repository = ParquetRepository(data_dir=tmp_path)
     monkeypatch.setattr(api_routes.query_service, "repository", test_repository)
 
@@ -84,10 +87,12 @@ def test_get_data_returns_filtered_sorted_results_from_parquet(tmp_path, monkeyp
 
     payload = response.json()
 
+    # Only the Fermi rows inside the requested date range should be returned
     assert payload["pagination"]["total"] == 2
     assert payload["pagination"]["page"] == 1
     assert payload["pagination"]["limit"] == 10
     assert len(payload["items"]) == 2
 
+    # Verify filtering by plant name and date range worked correctly
     assert all(item["plant_name"] == "Fermi" for item in payload["items"])
     assert all(item["period"].startswith("2026-03") for item in payload["items"])

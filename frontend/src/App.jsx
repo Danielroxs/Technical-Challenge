@@ -11,30 +11,49 @@ import "./App.css";
 import RefreshMessage from "./components/RefreshMessage";
 
 function App() {
+  // Main dataset returned by the backend
   const [items, setItems] = useState([]);
+
+  // Pagination metadata from /data endpoint
   const [pagination, setPagination] = useState(null);
+
+  // Global fetch state for table data
   const [loading, setLoading] = useState(true);
+
+  // User-friendly error for /data requests
   const [error, setError] = useState("");
 
+  // Separate input value from applied search value
+  // so the table only reloads when the form is submitted
   const [inputPlantName, setInputPlantName] = useState("");
   const [searchPlantName, setSearchPlantName] = useState("");
+
+  // Current page sent to the API
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Sorting controls mapped to backend query params
   const [sortBy, setSortBy] = useState("period");
   const [sortOrder, setSortOrder] = useState("desc");
+
+  // Date range filters
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  // Independent state for refresh action
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
   const [refreshSuccess, setRefreshSuccess] = useState("");
 
+  // Prevent selecting future dates in filters
   const today = new Date().toISOString().split("T")[0];
 
+  // Used to enable/disable "Clear filters" button
   const hasActiveFilters = Boolean(
     inputPlantName || searchPlantName || startDate || endDate,
   );
 
+  // Centralized table loader:
+  // calls /data with current filters, pagination and sorting
   const loadOutages = useCallback(async () => {
     try {
       setLoading(true);
@@ -59,16 +78,19 @@ function App() {
     }
   }, [searchPlantName, currentPage, sortBy, sortOrder, startDate, endDate]);
 
+  // Reload data whenever applied filters or pagination change
   useEffect(() => {
     loadOutages();
   }, [loadOutages]);
 
+  // Apply plant name filter only on form submit
   function handleSubmit(event) {
     event.preventDefault();
     setCurrentPage(1);
     setSearchPlantName(inputPlantName.trim());
   }
 
+  // Trigger backend refresh and then reload current table view
   async function handleRefresh() {
     try {
       setRefreshing(true);
@@ -86,6 +108,7 @@ function App() {
     }
   }
 
+  // Basic pagination controls
   function handlePreviousPage() {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
@@ -98,6 +121,9 @@ function App() {
     }
   }
 
+  // Validate start date:
+  // - no future dates
+  // - keep end date aligned if it becomes invalid
   function handleStartDateChange(value) {
     if (value && value > today) {
       return;
@@ -111,6 +137,9 @@ function App() {
     }
   }
 
+  // Validate end date:
+  // - no future dates
+  // - cannot be earlier than start date
   function handleEndDateChange(value) {
     if (value && value > today) {
       return;
@@ -124,6 +153,7 @@ function App() {
     setEndDate(value);
   }
 
+  // Reset all filters and return to page 1
   function handleClearFilters() {
     setInputPlantName("");
     setSearchPlantName("");
@@ -167,16 +197,19 @@ function App() {
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortByChange={(event) => {
+            // Reset to first page when sorting changes
             setCurrentPage(1);
             setSortBy(event.target.value);
           }}
           onSortOrderChange={(event) => {
+            // Reset to first page when sorting changes
             setCurrentPage(1);
             setSortOrder(event.target.value);
           }}
         />
       </section>
 
+      {/* Feedback messages for refresh action */}
       {refreshError && (
         <RefreshMessage
           key={`error-${refreshError}`}
@@ -194,6 +227,7 @@ function App() {
       )}
 
       <section className="results-area">
+        {/* Loading state */}
         {loading && (
           <StatusCard
             title="Loading outage data"
@@ -202,6 +236,7 @@ function App() {
           />
         )}
 
+        {/* Error state */}
         {!loading && error && (
           <StatusCard
             title="Something went wrong"
@@ -210,6 +245,7 @@ function App() {
           />
         )}
 
+        {/* Empty state */}
         {!loading && !error && items.length === 0 && (
           <StatusCard
             title="No outage records found"
@@ -218,6 +254,7 @@ function App() {
           />
         )}
 
+        {/* Success state */}
         {!loading && !error && items.length > 0 && (
           <>
             <p className="summary-text">

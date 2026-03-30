@@ -1,5 +1,8 @@
+// Base URL for the local FastAPI backend
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+// Fetch outage data from /data using optional filters,
+// pagination, and sorting parameters
 export async function getOutages({
   page = 1,
   limit = 20,
@@ -12,11 +15,13 @@ export async function getOutages({
 } = {}) {
   const params = new URLSearchParams();
 
+  // Required query params used by the backend
   params.set("page", String(page));
   params.set("limit", String(limit));
   params.set("sort_by", sortBy);
   params.set("sort_order", sortOrder);
 
+  // Only include filters when the user provides them
   if (startDate) params.set("start_date", startDate);
   if (endDate) params.set("end_date", endDate);
   if (plantId) params.set("plant_id", plantId);
@@ -26,12 +31,14 @@ export async function getOutages({
 
   let payload = null;
 
+  // Guard against non-JSON responses from the API
   try {
     payload = await response.json();
   } catch {
     throw new Error("The API returned an invalid JSON response.");
   }
 
+  // Surface backend error details when available
   if (!response.ok) {
     throw new Error(payload?.detail || "Failed to fetch outage data.");
   }
@@ -39,6 +46,7 @@ export async function getOutages({
   return payload;
 }
 
+// Trigger a backend refresh to fetch the latest data
 export async function refreshOutages() {
   const response = await fetch(`${API_BASE_URL}/refresh`, {
     method: "POST",
@@ -46,6 +54,7 @@ export async function refreshOutages() {
 
   let payload = null;
 
+  // Keep refresh error handling consistent with /data requests
   try {
     payload = await response.json();
   } catch {
