@@ -36,7 +36,7 @@ class EIAClient:
 
         for attempt in range(retries + 1):
             try:
-                response = requests.get(url, params=params, timeout=20)
+                response = requests.get(url, params=params, timeout=60)
 
                 if response.status_code in (401, 403):
                     raise EIAInvalidAPIKeyError(
