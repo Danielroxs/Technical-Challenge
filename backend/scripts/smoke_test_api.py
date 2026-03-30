@@ -3,29 +3,37 @@ from typing import Any
 
 import requests
 
+# Local API base URL used by the smoke test script.
 BASE_URL = "http://127.0.0.1:8000"
+
+# Generous timeout to support the optional refresh flow,
+# which may take longer because it triggers a full data reload.
 TIMEOUT = 300
 
-# Cambiar a True solo cuando se quiera probar POST /refresh
-# Consultara a la EIA API y reescribira los parquet
+# Enable only when testing POST /refresh.
+# This will call the EIA API and rewrite the Parquet outputs.
 RUN_REFRESH = True
 
 
+# Stop execution immediately after a failed check.
 def fail(message: str) -> None:
     print(f"FAIL - {message}")
     sys.exit(1)
 
 
+# Print a successful validation message.
 def ok(message: str) -> None:
     print(f"OK   - {message}")
 
 
+# Small assertion helper used to keep test output readable.
 def assert_true(condition: bool, message: str) -> None:
     if not condition:
         fail(message)
     ok(message)
 
 
+# Parse the HTTP response body as JSON and fail fast if parsing breaks.
 def get_json(response: requests.Response) -> Any:
     try:
         return response.json()
@@ -33,14 +41,17 @@ def get_json(response: requests.Response) -> Any:
         fail(f"No se pudo parsear JSON. Status={response.status_code} Body={response.text[:300]}")
 
 
+# Wrapper for GET requests to keep request construction consistent.
 def request_get(path: str, **params: Any) -> requests.Response:
     return requests.get(f"{BASE_URL}{path}", params=params, timeout=TIMEOUT)
 
 
+# Wrapper for POST requests used by the refresh endpoint test.
 def request_post(path: str) -> requests.Response:
     return requests.post(f"{BASE_URL}{path}", timeout=TIMEOUT)
 
 
+# Verify the health endpoint is reachable and returns the expected contract.
 def check_health() -> None:
     response = request_get("/health")
     payload = get_json(response)
@@ -50,6 +61,7 @@ def check_health() -> None:
     assert_true("message" in payload, "/health incluye message")
 
 
+# Validate the core /data response structure and required item fields.
 def check_data_contract() -> dict[str, Any]:
     response = request_get("/data", limit=3)
     payload = get_json(response)
@@ -65,6 +77,7 @@ def check_data_contract() -> dict[str, Any]:
 
     items = payload["items"]
     if items:
+        # Use the first row to verify the API exposes the modeled outage fields.
         required_keys = {
             "outage_id",
             "plant_id",
@@ -82,6 +95,7 @@ def check_data_contract() -> dict[str, Any]:
     return payload
 
 
+# Check that plant_name filtering behaves like a substring match.
 def check_filter_by_plant_name(sample_payload: dict[str, Any]) -> None:
     items = sample_payload["items"]
     if not items:
@@ -101,6 +115,7 @@ def check_filter_by_plant_name(sample_payload: dict[str, Any]) -> None:
         assert_true(needle.lower() in plant_name, f"plant_name contiene '{needle}'")
 
 
+# Check that the date range filter returns only rows within the selected period.
 def check_filter_by_date(sample_payload: dict[str, Any]) -> None:
     items = sample_payload["items"]
     if not items:
@@ -118,6 +133,7 @@ def check_filter_by_date(sample_payload: dict[str, Any]) -> None:
         assert_true(item["period"] == sample_period, "todas las filas respetan el rango de fecha")
 
 
+# Verify descending sorting on outage_mw.
 def check_sorting() -> None:
     response = request_get("/data", sort_by="outage_mw", sort_order="desc", limit=10)
     payload = get_json(response)
@@ -128,6 +144,7 @@ def check_sorting() -> None:
     assert_true(values == sorted(values, reverse=True), "outage_mw viene ordenado desc")
 
 
+# Verify that pagination splits results into different pages without overlap.
 def check_pagination() -> None:
     page_1 = get_json(request_get("/data", page=1, limit=3))
     page_2 = get_json(request_get("/data", page=2, limit=3))
@@ -135,11 +152,12 @@ def check_pagination() -> None:
     ids_1 = {item["outage_id"] for item in page_1["items"]}
     ids_2 = {item["outage_id"] for item in page_2["items"]}
 
-    # Si hay suficientes datos, idealmente no deben repetirse entre páginas.
+    # If enough rows exist, the same outage should not appear on both pages.
     if ids_1 and ids_2:
         assert_true(ids_1.isdisjoint(ids_2), "page=1 y page=2 no repiten outage_id")
 
 
+# Confirm invalid inputs are rejected with the expected HTTP behavior.
 def check_bad_requests() -> None:
     bad_sort = request_get("/data", sort_by="hacker_column")
     bad_sort_payload = get_json(bad_sort)
@@ -152,10 +170,11 @@ def check_bad_requests() -> None:
     assert_true("detail" in bad_date_payload, "fecha inválida incluye detail")
 
     bad_limit = request_get("/data", limit=101)
-    # Esto normalmente lo rechaza FastAPI antes de entrar al service.
+    # FastAPI should reject this before the request reaches the service layer.
     assert_true(bad_limit.status_code == 422, "limit > 100 devuelve 422 por validación HTTP")
 
 
+# Trigger a refresh and verify the API exposes data from the new run when successful.
 def check_refresh() -> None:
     response = request_post("/refresh")
     payload = get_json(response)
@@ -172,12 +191,14 @@ def check_refresh() -> None:
         items = data_after.get("items", [])
 
         if items:
+            # The newest rows should already point to the run_id returned by /refresh.
             assert_true(
                 all(item.get("run_id") == run_id for item in items),
                 "/data ya está leyendo el nuevo run_id después del refresh",
             )
 
 
+# Run the full smoke test suite against the local API.
 def main() -> None:
     print(f"Probando API en {BASE_URL}\n")
 
@@ -197,5 +218,6 @@ def main() -> None:
     print("\nTodo bien. Tu API pasó el smoke test básico.")
 
 
+# Run only when the file is executed directly.
 if __name__ == "__main__":
     main()

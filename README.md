@@ -57,11 +57,13 @@ cd arkham-nuclear-outages
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the project root:
+Copy the template file to create your local environment configuration:
 
-```env
-EIA_API_KEY=your_api_key_here
+```bash
+cp .env.example .env
 ```
+
+Open the `.env` file in the project root and replace `your_api_key_here` with your actual **EIA API Key**.
 
 ### 3. Setup Backend
 
@@ -85,16 +87,6 @@ npm run dev
 
 The dashboard will be available at: [http://localhost:5173](http://localhost:5173)
 
-### 5. Setup Environment Variables
-
-Copy the template file to create your local environment configuration:
-
-```bash
-cp .env.example .env
-```
-
-Open the `.env` file and replace `your_api_key_here` with your actual **EIA API Key**.
-
 ### 6. Data Source Logic
 
 The API is designed for high performance by separating storage from ingestion:
@@ -110,16 +102,26 @@ This ensures that data queries are always fast, regardless of the external API's
 
 ## Data Model & Schema
 
-The model uses a simple relational structure with 3 tables to ensure traceability and easy querying.
-
-- **plants**: Dimension table containing `plant_id` (PK) and `plant_name`.
-- **outages**: Fact table containing daily records (`outage_id`, `capacity_mw`, `outage_mw`, `period`, etc.).
-- **refresh_runs**: Audit table to track every API ingestion (status, records fetched, timestamps).
+The model uses a simple relational structure with 3 tables to ensure traceability and efficient querying.
 
 ### Relationships:
 
-- `plants.plant_id` -> `outages.plant_id` (1:N)
-- `refresh_runs.run_id` -> `outages.run_id` (1:N)
+## Data Model & Schema
+
+The model uses a simple relational structure with 3 tables to ensure traceability and efficient querying.
+
+- **plants**: Dimension table containing `plant_id` (PK) and `plant_name`.
+- **outages**: Fact table containing daily records (`outage_id`, `capacity_mw`, `outage_mw`, `percent_outage`, `period`, etc.).
+- **refresh_runs**: Audit table to track every API ingestion (status, records_fetched, timestamps).
+
+### Relationships:
+
+- `plants.plant_id` → `outages.plant_id` (1:N)
+- `refresh_runs.run_id` → `outages.run_id` (1:N)
+
+### Entity-Relationship Diagram
+
+![ER Diagram](docs/er_diagram.png)
 
 ## API Endpoints
 
@@ -133,6 +135,32 @@ The model uses a simple relational structure with 3 tables to ensure traceabilit
 
 ```bash
 curl "http://127.0.0.1:8000/data?page=1&limit=20&sort_by=period&sort_order=desc"
+```
+
+### Example Response
+
+```json
+{
+  "items": [
+    {
+      "outage_id": "16e34262cd29e178",
+      "plant_id": "1715",
+      "plant_name": "Palisades",
+      "period": "2026-03-27",
+      "capacity_mw": 815.6,
+      "outage_mw": 815.6,
+      "percent_outage": 100.0,
+      "run_id": "76b84bdaab79",
+      "ingested_at": "2026-03-29T01:59:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 1,
+    "total_pages": 1,
+    "total_items": 1
+  }
+}
 ```
 
 ---
@@ -149,6 +177,56 @@ curl "http://127.0.0.1:8000/data?page=1&limit=20&sort_by=period&sort_order=desc"
   - Responsive layout
 - **Live States:** Graceful handling of Loading, Error, and Empty (no results) states.
 - **Action Trigger:** Dedicated Refresh button to synchronize local data with the EIA API.
+
+---
+
+## Result Examples
+
+### Web Interface – Data Table with Filters
+
+![Outages Table with Filters](docs/respFilter.png)
+
+### Web Interface – Empty State
+
+![Empty State](docs/emptyState.png)
+
+### API JSON Response Example
+
+![API JSON Response](docs/respJSON.png)
+
+Or as plain JSON:
+
+```json
+{
+  "items": [
+    {
+      "outage_id": "16e34262cd29e178",
+      "plant_id": "1715",
+      "plant_name": "Palisades",
+      "period": "2026-03-27",
+      "capacity_mw": 815.6,
+      "outage_mw": 815.6,
+      "percent_outage": 100.0,
+      "run_id": "267dd0d97098",
+      "ingested_at": "2026-03-30T03:49:57Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 426184,
+    "total_pages": 21310
+  }
+}
+```
+
+---
+
+## Technical Decision: Plain React vs. TanStack Query/Table
+
+For this challenge, I chose to implement the frontend using only React, HTML, and CSS, without advanced libraries such as TanStack Query or TanStack Table. This allowed me to demonstrate a solid understanding of React fundamentals, state management, and UI logic from scratch, while keeping the project simple and easy to review.
+
+In a production environment or for a larger-scale project, I would consider integrating TanStack Query/Table to optimize data fetching, caching, and complex table handling. However, for this challenge, I prioritized code clarity and transparency.
 
 ---
 
@@ -179,3 +257,5 @@ The `/refresh` endpoint is fully implemented, but its runtime depends on the res
 
 **Luis Daniel**  
 _Software Engineer Candidate - Arkham Technologies Technical Challenge_
+
+> **Note:** This project requires Python 3.12. Using other versions may cause compatibility issues.

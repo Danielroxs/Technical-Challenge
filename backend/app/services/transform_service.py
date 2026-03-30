@@ -4,6 +4,7 @@ import pandas as pd
 from app.utils.ids import build_outage_id
 
 
+# Minimum raw columns required to build the modeled tables.
 RAW_REQUIRED_COLUMNS = (
     "period",
     "facility",
@@ -13,6 +14,7 @@ RAW_REQUIRED_COLUMNS = (
     "percentOutage",
 )
 
+# Optional unit columns captured for refresh-run metadata.
 UNIT_COLUMNS = (
     "capacity-units",
     "outage-units",
@@ -20,6 +22,7 @@ UNIT_COLUMNS = (
 )
 
 
+# Validate that the raw dataset contains the fields required by the transform layer.
 def validate_raw_schema(df: pd.DataFrame) -> None:
     missing_columns = [column for column in RAW_REQUIRED_COLUMNS if column not in df.columns]
 
@@ -29,6 +32,7 @@ def validate_raw_schema(df: pd.DataFrame) -> None:
         )
 
 
+# Collect the distinct unit values reported by the source, when present.
 def summarize_unit_columns(df: pd.DataFrame) -> dict:
     summary = {}
 
@@ -40,9 +44,12 @@ def summarize_unit_columns(df: pd.DataFrame) -> dict:
     return summary
 
 
+# Build the plants dimension table from distinct facility codes and names.
 def build_plants_table(df: pd.DataFrame) -> pd.DataFrame:
     validate_raw_schema(df)
 
+    # Guard against inconsistent source data where one facility code maps
+    # to more than one facility name.
     name_conflicts = df.groupby("facility")["facilityName"].nunique()
     conflicting_facilities = name_conflicts[name_conflicts > 1]
 
@@ -69,6 +76,7 @@ def build_plants_table(df: pd.DataFrame) -> pd.DataFrame:
     return plants_df
 
 
+# Build the outages fact table with normalized field names and refresh metadata.
 def build_outages_table(
     df: pd.DataFrame,
     run_id: str,
@@ -86,6 +94,7 @@ def build_outages_table(
         ]
     ].copy()
 
+    # Rename raw source fields to the API-facing outage schema.
     outages_df = outages_df.rename(
         columns={
             "facility": "plant_id",
@@ -95,6 +104,7 @@ def build_outages_table(
         }
     )
 
+    # Normalize types before generating ids and persisting the modeled table.
     outages_df["plant_id"] = outages_df["plant_id"].astype(str)
     outages_df["period"] = pd.to_datetime(outages_df["period"])
     outages_df["capacity_mw"] = pd.to_numeric(outages_df["capacity_mw"], errors="coerce")
@@ -103,6 +113,7 @@ def build_outages_table(
         outages_df["percent_outage"], errors="coerce"
     )
 
+    # Create a deterministic outage id using plant and period.
     outages_df["outage_id"] = outages_df.apply(
         lambda row: build_outage_id(
             plant_id=row["plant_id"],
@@ -114,6 +125,7 @@ def build_outages_table(
     outages_df["run_id"] = run_id
     outages_df["ingested_at"] = pd.Timestamp(ingested_at)
 
+    # Keep only the modeled outage columns exposed to downstream layers.
     outages_df = outages_df[
         [
             "outage_id",
@@ -135,6 +147,7 @@ def build_outages_table(
     return outages_df
 
 
+# Build a one-row audit record describing the refresh execution.
 def build_refresh_run_row(
     run_id: str,
     started_at,
@@ -163,6 +176,7 @@ def build_refresh_run_row(
         "max_period": pd.Timestamp(max_period),
         "facilities_count": facilities_count,
         "note": note,
+        # Store unit metadata as JSON so it can be preserved in a single column.
         "unit_summary": json.dumps(unit_summary or {}, ensure_ascii=False),
     }
 

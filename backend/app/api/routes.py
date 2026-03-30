@@ -5,12 +5,15 @@ from app.services.eia_client import EIAClientError, EIAInvalidAPIKeyError
 from app.services.query_service import QueryService
 from app.services.refresh_service import run_refresh
 
+# API router for health, query, and refresh endpoints.
 router = APIRouter()
 
+# Shared service instances used by the route handlers.
 repository = ParquetRepository()
 query_service = QueryService(repository)
 
 
+# Lightweight health check used to confirm the API is up.
 @router.get("/health")
 def health_check():
     return {
@@ -19,6 +22,7 @@ def health_check():
     }
 
 
+# Read outage data with optional filters, sorting, and pagination.
 @router.get("/data")
 def get_data(
     page: int = Query(1, ge=1),
@@ -31,6 +35,7 @@ def get_data(
     sort_order: str = Query("desc"),
 ):
     try:
+        # Delegate all query logic to the service layer.
         result = query_service.get_outages(
             page=page,
             limit=limit,
@@ -54,7 +59,9 @@ def get_data(
             status_code=500,
             detail="Unexpected error while reading outage data.",
         )
-        
+
+
+# Trigger a new refresh run that fetches and rebuilds the parquet outputs.
 @router.post("/refresh")
 def refresh_data():
     try:

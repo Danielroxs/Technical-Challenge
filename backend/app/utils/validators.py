@@ -1,3 +1,4 @@
+# Minimum fields required for a raw EIA outage record to be considered usable.
 REQUIRED_FIELDS = (
     "period",
     "facility",
@@ -8,6 +9,7 @@ REQUIRED_FIELDS = (
 )
 
 
+# Validate that a single record contains all required non-empty fields.
 def validate_required_fields(
     record: dict,
     required_fields: tuple[str, ...] = REQUIRED_FIELDS,
@@ -21,6 +23,7 @@ def validate_required_fields(
     return len(missing_fields) == 0, missing_fields
 
 
+# Split raw records into valid and invalid groups for downstream processing.
 def validate_records(records: list[dict]) -> tuple[list[dict], list[dict]]:
     valid_records = []
     invalid_records = []
