@@ -57,10 +57,31 @@ cp .env.example .env
 # Edit .env and set your EIA_API_KEY
 ```
 
+Required:
+
+- `EIA_API_KEY`: API key used to authenticate requests to the EIA Open Data API
+
 2. **Start the backend** (in a new terminal)
 
-From the root directory:
+From the root directory, activate the virtual environment:
+
+**Windows (PowerShell):**
+
+```powershell
 .\.venv\Scripts\Activate.ps1
+```
+
+**Windows (cmd):**
+
+```cmd
+.\.venv\Scripts\activate.bat
+```
+
+**macOS/Linux:**
+
+```bash
+source .venv/bin/activate
+```
 
 From the `backend/` directory:
 
@@ -216,7 +237,20 @@ In a production environment or for a larger-scale project, I would consider inte
 
 ---
 
-### Note about EIA API totals
+## Assumptions Made
+
+- The EIA API is treated as the source of truth, while local Parquet files act as the cached state used by the API and frontend.
+- A simple 3-table schema (`plants`, `outages`, `refresh_runs`) is sufficient for this challenge and keeps relationships easy to understand.
+- `facility` is used as `plant_id`, and `facilityName` is used as `plant_name`.
+- Since the source does not expose a guaranteed unique outage row ID, a deterministic `outage_id` is generated for deduplication and traceability.
+- The source may update recent historical records, so incremental refresh uses a 7-day lookback window.
+- The EIA `response.total` value is treated as diagnostic only; pagination stops based on real returned rows.
+- `/refresh` runs synchronously for simplicity and local evaluation.
+- Local Parquet storage is sufficient for the scale and goals of this technical challenge.
+
+---
+
+### Implementation Notes
 
 During testing, the EIA API `response.total` value did not always match the number of rows actually returned through pagination for this dataset. This was manually verified against the API dashboard and by checking the last available pages.
 
@@ -224,15 +258,12 @@ Because of that, `response.total` is treated as a diagnostic field only. Paginat
 
 ---
 
-## Bonus: Incremental Extraction & Deduplication
+## Bonus Implemented
 
-- **Incremental Extraction:** The connector script now supports incremental data extraction. It queries the latest stored outage period in the local Parquet files and only fetches new or updated records from the EIA API.
-- **Lookback Window:** To safely capture late-arriving or recently changed records, a 7-day lookback window is applied. This ensures that any corrections or updates from the source are not missed.
-- **Deterministic Deduplication:** When merging incremental results, the process uses the `outage_id` as a deterministic unique key. This guarantees that only the latest version of each outage record is kept in the local Parquet files, preventing duplicates and ensuring data consistency.
-
-- **Data Refresh:** The `/refresh` action is synchronous; for very large datasets, a background task (Celery/RQ) would be preferred.
-- **Storage:** Parquet was chosen for its efficiency in analytical queries compared to CSV/JSON.
-- **EIA API:** The system assumes the EIA API is the source of truth; if the API is down, the system serves the last cached Parquet state.
+- **Incremental extraction:** The connector supports incremental retrieval by checking the latest stored outage period and fetching only new or recently updated records from the EIA API.
+- **Lookback window:** A 7-day lookback window is applied during incremental refresh to capture late-arriving changes or recent corrections from the source.
+- **Deterministic deduplication:** The pipeline uses `outage_id` as a deterministic unique key and keeps the latest record per outage to prevent duplicates.
+- **Automated tests:** The project includes focused backend tests covering critical logic such as incremental refresh calculation, deduplication, and API integration.
 
 ---
 
@@ -258,12 +289,6 @@ To run a specific test file:
 python -m pytest tests/test_refresh_service.py -q
 python -m pytest tests/test_api_data.py -q
 ```
-
----
-
-Required:
-
-- `EIA_API_KEY`: API key used to authenticate requests to the EIA Open Data API
 
 ---
 
