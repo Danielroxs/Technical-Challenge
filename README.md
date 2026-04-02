@@ -48,79 +48,92 @@ arkham-nuclear-outages/
 
 ## 🚀 Quick Start
 
-### 1. Clone the repository & set up environment
+### 1. Clone the repository and set up the environment
 
 ```bash
-# Clone the repository
 git clone https://github.com/Danielroxs/Technical-Challenge.git
 cd Technical-Challenge
+```
 
-# Setup environment variables
+Set up environment variables:
+
+**Windows (PowerShell)**
+
+```powershell
 Copy-Item .env.example .env
-# Edit .env and set your EIA_API_KEY
+```
 
-# Create virtual environment
-python -m venv .env
+**macOS/Linux**
 
-# Activate virtual environment
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set your `EIA_API_KEY`.
+
+**Create the virtual environment:**
+
+```bash
+python -m venv .venv
+```
+
+**Activate it depending on your OS:**
+
+**Windows (PowerShell)**
+
+```powershell
 .\.venv\Scripts\Activate.ps1
+```
 
+**Windows (cmd)**
+
+```cmd
+.\.venv\Scripts\activate.bat
+```
+
+**macOS/Linux**
+
+```bash
+source .venv/bin/activate
 ```
 
 Required:
 
 - `EIA_API_KEY`: API key used to authenticate requests to the EIA Open Data API
 
-2. **Start the backend** (in a new terminal)
+### 2. Start the backend
 
-From the root directory, activate the virtual environment:
-
-**Windows (PowerShell):**
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-**Windows (cmd):**
-
-```cmd
-.\.venv\Scripts\activate.bat
-```
-
-**macOS/Linux:**
-
-```bash
-source .venv/bin/activate
-```
-
-From the `backend/` directory:
+From the project root, go to the `backend/` directory and run:
 
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-# API: http://127.0.0.1:8000
 ```
 
-3. **Start the frontend** (in a new terminal)
+API available at: `http://127.0.0.1:8000`
 
-From the `frontend/` directory:
+### 3. Start the frontend
+
+From the `frontend/` directory, run:
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# Dashboard: http://localhost:5173
 ```
 
-4. **⚡️ Initialize local database (First-time only)**
+Dashboard available at: `http://localhost:5173`
 
-   On a fresh clone, the `data/parquet` directory is empty. Trigger the first refresh to auto-provision the local database and directory structure:
-   - **Option A (Recommended):** Open the dashboard and click **"Refresh data"**.
-   - **Option B (CLI):** Run `python -m scripts.refresh_nuclear_outages` from the `backend/` folder.
-   - **Option C (API):** Send a `POST` to `http://127.0.0.1:8000/refresh` (curl/Postman/FastAPI docs UI).
+### 4. ⚡ Initialize local database (first-time only)
 
-   **Note:** The first refresh may take 3-4 minutes to complete as it downloads and processes all historical data. After this, the dashboard will display outage data.
+On a fresh clone, the `data/parquet` directory is empty. Trigger the first refresh to auto-provision the local database and directory structure:
+
+- **Option A (Recommended):** Open the dashboard and click **"Refresh data"**.
+- **Option B (CLI):** Run `python -m scripts.refresh_nuclear_outages` from the `backend/` folder.
+- **Option C (API):** Send a `POST` to `http://127.0.0.1:8000/refresh`.
+
+**Note:** The first refresh may take 3–4 minutes to complete as it downloads and processes all historical data. After this, the dashboard will display outage data.
 
 ---
 
